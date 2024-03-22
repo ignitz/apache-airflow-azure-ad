@@ -21,6 +21,7 @@ from __future__ import annotations
 import os
 
 from airflow.www.fab_security.manager import AUTH_DB
+from airflow.www.security_manager import AirflowSecurityManagerV2
 
 # from airflow.www.fab_security.manager import AUTH_LDAP
 # from airflow.www.fab_security.manager import AUTH_OAUTH
@@ -130,8 +131,9 @@ AUTH_TYPE = AUTH_DB
 # APP_THEME = "united.css"
 # APP_THEME = "yeti.css"
 
-from airflow.www.fab_security.manager import AUTH_OAUTH
 import os
+from airflow.www.fab_security.manager import AUTH_OAUTH
+from airflow.auth.managers.fab.security_manager.override import FabAirflowSecurityManagerOverride
 
 AUTH_TYPE = AUTH_OAUTH
 AUTH_ROLES_SYNC_AT_LOGIN = True  # Checks roles on every login
@@ -168,3 +170,14 @@ OAUTH_PROVIDERS = [
         },
     }
 ]
+
+
+class CustomSecurityManager(FabAirflowSecurityManagerOverride):
+    def get_oauth_user_info(sm, provider, resp=None):
+        response = super().get_oauth_user_info(provider, resp)
+        if provider == "azure":
+            response["username"] = response["email"]
+        return response
+
+
+SECURITY_MANAGER_CLASS = CustomSecurityManager
