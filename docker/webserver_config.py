@@ -21,7 +21,6 @@ from __future__ import annotations
 import os
 
 from airflow.www.fab_security.manager import AUTH_DB
-from airflow.www.security_manager import AirflowSecurityManagerV2
 
 # from airflow.www.fab_security.manager import AUTH_LDAP
 # from airflow.www.fab_security.manager import AUTH_OAUTH
@@ -133,7 +132,6 @@ AUTH_TYPE = AUTH_DB
 
 import os
 from airflow.www.fab_security.manager import AUTH_OAUTH
-from airflow.auth.managers.fab.security_manager.override import FabAirflowSecurityManagerOverride
 
 AUTH_TYPE = AUTH_OAUTH
 AUTH_ROLES_SYNC_AT_LOGIN = True  # Checks roles on every login
@@ -150,7 +148,7 @@ CSRF_ENABLED = True
 
 AZURE_CLIENT_ID = os.environ["AZURE_CLIENT_ID"]
 AZURE_CLIENT_SECRET = os.environ["AZURE_CLIENT_SECRET"]
-TENANT_ID = os.environ["TENANT_ID"]
+AZURE_TENANT_ID = os.environ["AZURE_TENANT_ID"]
 
 OAUTH_PROVIDERS = [
     {
@@ -158,11 +156,11 @@ OAUTH_PROVIDERS = [
         "token_key": "access_token",
         "icon": "fa-windows",
         "remote_app": {
-            "api_base_url": f"https://login.microsoftonline.com/{TENANT_ID}",
+            "api_base_url": f"https://login.microsoftonline.com/{AZURE_TENANT_ID}",
             "request_token_params": {"scope": "openid email profile"},
-            "access_token_url": f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token",
+            "access_token_url": f"https://login.microsoftonline.com/{AZURE_TENANT_ID}/oauth2/v2.0/token",
             "access_token_params": {"scope": "openid email profile"},
-            "authorize_url": f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/authorize",
+            "authorize_url": f"https://login.microsoftonline.com/{AZURE_TENANT_ID}/oauth2/v2.0/authorize",
             "authorize_params": {"scope": "openid email profile"},
             "client_id": AZURE_CLIENT_ID,
             "client_secret": AZURE_CLIENT_SECRET,
@@ -172,12 +170,29 @@ OAUTH_PROVIDERS = [
 ]
 
 
-class CustomSecurityManager(FabAirflowSecurityManagerOverride):
-    def get_oauth_user_info(sm, provider, resp=None):
-        response = super().get_oauth_user_info(provider, resp)
+from airflow.www.security import AirflowSecurityManager
+class CustomSecurityManager(AirflowSecurityManager):
+    def get_oauth_user_info(self, provider, resp=None):
+        import logging
+        log = logging.getLogger(__name__)
+
         if provider == "azure":
-            response["username"] = response["email"]
-        return response
+            log.info("Azure response received : %s", resp)
+            id_token = resp["id_token"]
+            log.info(str(id_token))
+            me = self._azure_jwt_token_parse(id_token)
+            log.info("Parse JWT token : %s", me)
+            name = me.get("name", "")
+            return {
+                "name": name,
+                "email": me["email"],
+                "first_name": me.get("given_name", name.split(" ")[0]),
+                "last_name": me.get("family_name", name.split(" ")[-1]),
+                "id": me["oid"],
+                "username": me["email"],
+                "role_keys": me.get("roles", []),
+            }
+        return resp
 
 
 SECURITY_MANAGER_CLASS = CustomSecurityManager
