@@ -150,19 +150,19 @@ CSRF_ENABLED = True
 
 AZURE_CLIENT_ID = os.environ["AZURE_CLIENT_ID"]
 AZURE_CLIENT_SECRET = os.environ["AZURE_CLIENT_SECRET"]
-TENANT_ID = os.environ["TENANT_ID"]
+AZURE_TENANT_ID = os.environ["AZURE_TENANT_ID"]
 
 OAUTH_PROVIDERS = [
     {
         "name": "azure",
         "token_key": "access_token",
-        "icon": "fa-windows",
+        "icon": "fa-user-circle-o",
         "remote_app": {
-            "api_base_url": f"https://login.microsoftonline.com/{TENANT_ID}",
+            "api_base_url": f"https://login.microsoftonline.com/{AZURE_TENANT_ID}",
             "request_token_params": {"scope": "openid email profile"},
-            "access_token_url": f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token",
+            "access_token_url": f"https://login.microsoftonline.com/{AZURE_TENANT_ID}/oauth2/v2.0/token",
             "access_token_params": {"scope": "openid email profile"},
-            "authorize_url": f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/authorize",
+            "authorize_url": f"https://login.microsoftonline.com/{AZURE_TENANT_ID}/oauth2/v2.0/authorize",
             "authorize_params": {"scope": "openid email profile"},
             "client_id": AZURE_CLIENT_ID,
             "client_secret": AZURE_CLIENT_SECRET,
